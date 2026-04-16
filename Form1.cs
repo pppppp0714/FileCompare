@@ -1,3 +1,6 @@
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using ListView = System.Windows.Forms.ListView;
+
 namespace FileCompare
 {
     public partial class Form1 : Form
@@ -6,7 +9,57 @@ namespace FileCompare
         {
             InitializeComponent();
         }
+        private void PopulateListView(ListView lv, string folderPath)
+        {
+            lv.BeginUpdate();
+            lv.Items.Clear();
+            try
+            { // 폴더(디렉터리) 먼저추가
+                var dirs = Directory.EnumerateDirectories(folderPath)
+                .Select(p => new DirectoryInfo(p))
+                .OrderBy(d => d.Name);
+                foreach (var d in dirs)
+                {
+                    var item = new ListViewItem(d.Name);
+                    item.SubItems.Add("<DIR>");
+                    item.SubItems.Add(d.LastWriteTime.ToString("g"));
+                    lv.Items.Add(item);
+                }
+                // 파일추가
+                var files = Directory.EnumerateFiles(folderPath)
+                .Select(p => new FileInfo(p))
+                .OrderBy(f => f.Name);
+                foreach (var f in files)
+                {
+                    var item = new ListViewItem(f.Name);
+                    item.SubItems.Add(f.Length.ToString("N0") + " 바이트");
+                    item.SubItems.Add(f.LastWriteTime.ToString("g"));
+                    lv.Items.Add(item);
+                }
+                // 컬럼너비자동조정(컨텐츠기준)
+                for (int i = 0; i < lv.Columns.Count; i++)
+                {
+                    lv.AutoResizeColumn(i,
+                    ColumnHeaderAutoResizeStyle.ColumnContent);
+                }
+            }
+            catch (DirectoryNotFoundException)
+            {
+                MessageBox.Show(this, "폴더를찾을수없습니다.", "오류",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (IOException ex)
+            {
+                MessageBox.Show(this, "입출력오류: " + ex.Message, "오류",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                lv.EndUpdate();
+            }
+        }
 
+        
         private void panel5_Paint(object sender, PaintEventArgs e)
         {
 
@@ -36,6 +89,7 @@ namespace FileCompare
                 if (dlg.ShowDialog() == DialogResult.OK)
                 {
                     txtLeftDir.Text = dlg.SelectedPath;
+                    PopulateListView(lvwLeftDir, dlg.SelectedPath);
                 }
 
             }
@@ -55,6 +109,7 @@ namespace FileCompare
                 if (dlg.ShowDialog() == DialogResult.OK)
                 {
                     txtRightDir.Text = dlg.SelectedPath;
+                    PopulateListView(lvwRightDir, dlg.SelectedPath);
                 }
 
             }
