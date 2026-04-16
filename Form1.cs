@@ -3,6 +3,7 @@ using ListView = System.Windows.Forms.ListView;
 using System.IO;
 using System.Linq;
 using System.Drawing;
+using System.Collections.Generic;
 
 namespace FileCompare
 {
@@ -11,6 +12,124 @@ namespace FileCompare
         public Form1()
         {
             InitializeComponent();
+            btnCopyFromLeft.Click += btnCopyFromLeft_Click;
+            btnCopyFromRight.Click += btnCopyFromRight_Click;
+        }
+
+        private void btnCopyFromRight_Click(object? sender, EventArgs e)
+        {
+            if (lvwRightDir.SelectedItems.Count == 0)
+            {
+                MessageBox.Show(this, "복사할 항목을 선택하세요.", "정보", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(txtLeftDir.Text) || !Directory.Exists(txtLeftDir.Text))
+            {
+                MessageBox.Show(this, "대상 폴더 경로가 유효하지 않습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                foreach (ListViewItem item in lvwRightDir.SelectedItems)
+                {
+                    if (item.ForeColor == Color.Gray)
+                    {
+                        var ret = MessageBox.Show(this, "선택한 항목은 대상보다 이전 버전입니다. 계속 복사하시겠습니까?", "확인", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        if (ret != DialogResult.Yes) continue;
+                    }
+
+                    if (item.Tag is FileInfo fi)
+                    {
+                        var destPath = Path.Combine(txtLeftDir.Text, fi.Name);
+                        File.Copy(fi.FullName, destPath, true);
+                        File.SetLastWriteTime(destPath, fi.LastWriteTime);
+                    }
+                    else if (item.Tag is DirectoryInfo di)
+                    {
+                        var destDir = Path.Combine(txtLeftDir.Text, di.Name);
+                        CopyDirectory(di.FullName, destDir);
+                        Directory.SetLastWriteTime(destDir, di.LastWriteTime);
+                    }
+                }
+
+                // 목록 갱신 및 색상 비교
+                PopulateListView(lvwLeftDir, txtLeftDir.Text);
+                CompareListViews();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "복사 중 오류가 발생했습니다: " + ex.Message, "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void btnCopyFromLeft_Click(object? sender, EventArgs e)
+        {
+            if (lvwLeftDir.SelectedItems.Count == 0)
+            {
+                MessageBox.Show(this, "복사할 항목을 선택하세요.", "정보", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(txtRightDir.Text) || !Directory.Exists(txtRightDir.Text))
+            {
+                MessageBox.Show(this, "대상 폴더 경로가 유효하지 않습니다.", "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            try
+            {
+                foreach (ListViewItem item in lvwLeftDir.SelectedItems)
+                {
+                    if (item.ForeColor == Color.Gray)
+                    {
+                        var ret = MessageBox.Show(this, "선택한 항목은 대상보다 이전 버전입니다. 계속 복사하시겠습니까?", "확인", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        if (ret != DialogResult.Yes) continue;
+                    }
+                    if (item.Tag is FileInfo fi)
+                    {
+                        var destPath = Path.Combine(txtRightDir.Text, fi.Name);
+                        File.Copy(fi.FullName, destPath, true);
+                        File.SetLastWriteTime(destPath, fi.LastWriteTime);
+                    }
+                    else if (item.Tag is DirectoryInfo di)
+                    {
+                        var destDir = Path.Combine(txtRightDir.Text, di.Name);
+                        CopyDirectory(di.FullName, destDir);
+                        Directory.SetLastWriteTime(destDir, di.LastWriteTime);
+                    }
+                }
+
+                // 목록 갱신 및 색상 비교
+                PopulateListView(lvwRightDir, txtRightDir.Text);
+                CompareListViews();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "복사 중 오류가 발생했습니다: " + ex.Message, "오류", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void CopyDirectory(string sourceDir, string destDir)
+        {
+            var src = new DirectoryInfo(sourceDir);
+            if (!src.Exists) return;
+            Directory.CreateDirectory(destDir);
+
+            // 파일 복사
+            foreach (var file in src.GetFiles())
+            {
+                var destFile = Path.Combine(destDir, file.Name);
+                file.CopyTo(destFile, true);
+                File.SetLastWriteTime(destFile, file.LastWriteTime);
+            }
+
+            // 하위 디렉터리 재귀 복사
+            foreach (var dir in src.GetDirectories())
+            {
+                var nextDest = Path.Combine(destDir, dir.Name);
+                CopyDirectory(dir.FullName, nextDest);
+                Directory.SetLastWriteTime(nextDest, dir.LastWriteTime);
+            }
         }
 
         private void CompareListViews()
@@ -132,21 +251,6 @@ namespace FileCompare
         }
 
         
-        private void panel5_Paint(object sender, PaintEventArgs e)
-        {
-
-        }
-
-        private void textBox2_TextChanged(object sender, EventArgs e)
-        {
-
-        }
-
-        private void lvwRightDir_SelectedIndexChanged(object sender, EventArgs e)
-        {
-
-        }
-
         private void btnLeftDir_Click(object sender, EventArgs e)
         {
             using (var dlg = new FolderBrowserDialog())

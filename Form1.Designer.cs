@@ -196,7 +196,6 @@
             txtRightDir.Name = "txtRightDir";
             txtRightDir.Size = new Size(284, 27);
             txtRightDir.TabIndex = 1;
-            txtRightDir.TextChanged += textBox2_TextChanged;
             // 
             // panel6
             // 
@@ -219,7 +218,6 @@
             lvwRightDir.TabIndex = 1;
             lvwRightDir.UseCompatibleStateImageBehavior = false;
             lvwRightDir.View = View.Details;
-            lvwRightDir.SelectedIndexChanged += lvwRightDir_SelectedIndexChanged;
             // 
             // panel4
             // 
