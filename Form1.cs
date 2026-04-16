@@ -134,17 +134,23 @@ namespace FileCompare
 
         private void CompareListViews()
         {
-            // 오른쪽 목록 항목들을 이름별로 빠르게 찾기 위한 딕셔너리 구성
+            // 오른쪽 목록 항목들을 이름+타입(파일/폴더)별로 빠르게 찾기 위한 딕셔너리 구성
+            string MakeKey(ListViewItem it)
+            {
+                var isDir = it.Tag is DirectoryInfo;
+                return (isDir ? "D:" : "F:") + it.Text;
+            }
+
             var rightDict = new Dictionary<string, ListViewItem>(StringComparer.OrdinalIgnoreCase);
             foreach (ListViewItem r in lvwRightDir.Items)
             {
-                rightDict[r.Text] = r;
+                rightDict[MakeKey(r)] = r;
             }
 
             // 왼쪽 항목 처리
             foreach (ListViewItem l in lvwLeftDir.Items)
             {
-                if (!rightDict.TryGetValue(l.Text, out var r))
+                if (!rightDict.TryGetValue(MakeKey(l), out var r))
                 {
                     // 오른쪽에 없음 -> 추가된 항목(왼쪽에만 존재하는 항목으로 처리)
                     l.ForeColor = Color.Purple; // 보라
@@ -185,10 +191,14 @@ namespace FileCompare
             }
 
             // 왼쪽에 없는 오른쪽 전용 항목
-            var leftNames = new HashSet<string>(lvwLeftDir.Items.Cast<ListViewItem>().Select(i => i.Text), StringComparer.OrdinalIgnoreCase);
+            var leftNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (ListViewItem i in lvwLeftDir.Items)
+            {
+                leftNames.Add(MakeKey(i));
+            }
             foreach (ListViewItem r in lvwRightDir.Items)
             {
-                if (!leftNames.Contains(r.Text))
+                if (!leftNames.Contains(MakeKey(r)))
                 {
                     r.ForeColor = Color.Purple; // 오른쪽에만 존재 -> 추가된 항목
                 }
@@ -208,7 +218,7 @@ namespace FileCompare
                     var item = new ListViewItem(d.Name);
                     item.SubItems.Add("<DIR>");
                     item.SubItems.Add(d.LastWriteTime.ToString("g"));
-                    // store FileSystemInfo for later comparison and default color
+                    // 디렉터리 항목도 파일과 동일하게 취급합니다: 비교 및 복사를 위해 FileSystemInfo를 저장하고 기본 색상을 설정
                     item.Tag = d;
                     item.ForeColor = Color.Black;
                     lv.Items.Add(item);
